@@ -2,62 +2,452 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dork Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dork Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg-soft: #111827;
+      --panel: #151b2d;
+      --panel-2: #1a2138;
+      --border: #232b45;
+      --border-hi: #2f3a5c;
+      --text: #e5e9f5;
+      --text-dim: #8b95b3;
+      --text-mute: #5e6785;
+      --accent: #6366f1;
+      --accent-2: #8b5cf6;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --success: #10b981;
+      --warn: #f59e0b;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      max-width: 720px;
-      margin: 3rem auto;
-      padding: 0 1.25rem;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.55;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.25rem 4rem;
+      position: relative;
+      overflow-x: hidden;
     }
-    h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
-    p.sub { color: #94a3b8; margin-top: 0; }
-    label { display: block; margin-top: 1.25rem; font-weight: 600; }
-    textarea, input[type=text] {
+
+    /* Ambient background glow */
+    body::before {
+      content: "";
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
       width: 100%;
-      padding: 0.75rem;
-      margin-top: 0.4rem;
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      color: #e2e8f0;
-      font-size: 1rem;
-      box-sizing: border-box;
-      font-family: inherit;
+      max-width: 680px;
     }
-    textarea { min-height: 80px; resize: vertical; }
-    button {
-      margin-top: 1.5rem;
-      padding: 0.75rem 1.5rem;
-      background: #3b82f6;
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+      letter-spacing: 0.02em;
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      margin: 0 0 0.6rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
+      font-size: 1rem;
+      margin: 0;
+      max-width: 480px;
+      margin-inline: auto;
+    }
+
+    /* Card */
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.03) inset,
+        0 20px 40px -20px rgba(0, 0, 0, 0.6);
+    }
+
+    .field { margin-bottom: 1.5rem; }
+    .field:last-of-type { margin-bottom: 0; }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      margin-bottom: 0.55rem;
+    }
+
+    label .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 6px;
+      background: var(--panel-2);
+      border: 1px solid var(--border-hi);
+      font-size: 0.7rem;
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    label .optional {
+      font-weight: 400;
+      color: var(--text-mute);
+      font-size: 0.8rem;
+      margin-left: auto;
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: #0d1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      transition: all 0.15s ease;
+      outline: none;
+      resize: vertical;
+    }
+
+    input[type="text"] { font-family: 'Inter', sans-serif; }
+
+    textarea { min-height: 88px; line-height: 1.5; }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: var(--accent);
+      background: #0f1528;
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea::placeholder, input::placeholder {
+      color: var(--text-mute);
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: var(--text-mute);
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .hint code {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      padding: 0.05rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #a5b4fc;
+    }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      margin-top: 1.75rem;
+      padding: 0.9rem 1.5rem;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
       color: white;
       border: none;
-      border-radius: 6px;
-      font-size: 1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.98rem;
       font-weight: 600;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 24px -8px var(--accent-glow);
+      letter-spacing: 0.01em;
     }
-    button:hover { background: #2563eb; }
-    .hint { font-size: 0.85rem; color: #64748b; margin-top: 0.3rem; }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px -8px var(--accent-glow);
+      filter: brightness(1.05);
+    }
+
+    .btn:active { transform: translateY(0); }
+
+    .btn svg { width: 16px; height: 16px; }
+
+    /* Footer stats */
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.6rem 0.8rem;
+      background: #0d1220;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .stat .icon {
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      background: var(--panel-2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-2);
+      flex-shrink: 0;
+    }
+
+    .stat .icon svg { width: 15px; height: 15px; }
+
+    .stat .label {
+      font-size: 0.7rem;
+      color: var(--text-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .stat .value {
+      font-size: 0.9rem;
+      color: var(--text);
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Page footer */
+    .footer {
+      text-align: center;
+      color: var(--text-mute);
+      font-size: 0.78rem;
+      margin-top: 2rem;
+    }
+
+    .footer a {
+      color: var(--text-dim);
+      text-decoration: none;
+    }
+
+    /* Loading state on submit */
+    form.loading .btn {
+      opacity: 0.75;
+      pointer-events: none;
+    }
+
+    form.loading .btn .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    form.loading .btn .btn-label::after {
+      content: "…";
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 2rem 1rem 3rem; }
+      h1 { font-size: 1.75rem; }
+      .card { padding: 1.5rem; border-radius: 14px; }
+      .stats { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
-  <h1>🔍 Dork Generator</h1>
-  <p class="sub">Combine your wordlists with keywords and target sites.</p>
+  <div class="wrap">
 
-  <form method="post" action="/generate">
-    <label for="keywords">What to look for (comma-separated)</label>
-    <textarea id="keywords" name="keywords" placeholder="braintree, woocommerce" required></textarea>
-    <div class="hint">e.g. <code>braintree</code> or <code>braintree, woocommerce</code></div>
+    <div class="header">
+      <div class="badge">
+        <span class="dot"></span>
+        Service online
+      </div>
+      <h1>Dork Generator</h1>
+      <p class="subtitle">
+        Combine your wordlists with keywords and target regions to build high-quality search queries.
+      </p>
+    </div>
 
-    <label for="targets">Target sites</label>
-    <input type="text" id="targets" name="targets" placeholder="uk, us, au  —  or leave blank / 'none'">
-    <div class="hint">Comma-separated. Leave blank or type <code>none</code> for no site restriction.</div>
+    <div class="card">
+      <form method="post" action="/generate" id="dorkForm">
 
-    <button type="submit">Generate dorks</button>
-  </form>
+        <div class="field">
+          <label for="keywords">
+            <span class="num">1</span>
+            What to look for
+          </label>
+          <textarea
+            id="keywords"
+            name="keywords"
+            placeholder="braintree, woocommerce"
+            required
+            spellcheck="false"
+            autocomplete="off"></textarea>
+          <div class="hint">
+            Comma-separated &nbsp;·&nbsp; e.g. <code>braintree</code> or <code>braintree, woocommerce</code>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="targets">
+            <span class="num">2</span>
+            Target regions
+            <span class="optional">optional</span>
+          </label>
+          <input
+            type="text"
+            id="targets"
+            name="targets"
+            placeholder="uk, us, au"
+            spellcheck="false"
+            autocomplete="off">
+          <div class="hint">
+            Comma-separated TLDs &nbsp;·&nbsp; leave blank or type <code>none</code> for no restriction
+          </div>
+        </div>
+
+        <button type="submit" class="btn">
+          <span class="spinner" style="display:none"></span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="btn-icon">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+          <span class="btn-label">Generate dorks</span>
+        </button>
+
+        <div class="stats">
+          <div class="stat">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16M4 12h16M4 18h10"/>
+              </svg>
+            </div>
+            <div>
+              <div class="label">inurl list</div>
+              <div class="value">shop.txt</div>
+            </div>
+          </div>
+          <div class="stat">
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="label">keywords</div>
+              <div class="value">keywords.txt</div>
+            </div>
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="footer">
+      Generated dorks are available as raw text and downloadable <code>.txt</code>.
+    </div>
+
+  </div>
+
+  <script>
+    // Prevent double-submit + show spinner
+    const form = document.getElementById('dorkForm');
+    form.addEventListener('submit', () => {
+      form.classList.add('loading');
+      const spinner = form.querySelector('.spinner');
+      const icon = form.querySelector('.btn-icon');
+      if (spinner) spinner.style.display = 'inline-block';
+      if (icon) icon.style.display = 'none';
+    });
+  </script>
 </body>
 </html>
