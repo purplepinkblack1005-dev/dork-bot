@@ -11,6 +11,9 @@ from telegram.ext import (
     filters,
 )
 
+# ------------------------------------------------------------------
+# CONFIG
+# ------------------------------------------------------------------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 RENDER_URL = os.getenv("RENDER_EXTERNAL_URL")
 PORT = int(os.getenv("PORT", "10000"))
@@ -19,22 +22,35 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INURL_FILE = os.path.join(BASE_DIR, "shop.txt")
 KEYWORDS_FILE = os.path.join(BASE_DIR, "keywords.txt")
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
 logger = logging.getLogger(__name__)
 
+# Conversation states
 ASK_KEYWORD, ASK_TARGETS = range(2)
 
 
-def load_wordlist(path):
+# ------------------------------------------------------------------
+# HELPERS
+# ------------------------------------------------------------------
+def load_wordlist(path: str) -> list[str]:
+    """Load a wordlist file, stripping whitespace and skipping empty lines."""
     if not os.path.exists(path):
+        logger.warning(f"Wordlist not found: {path}")
         return []
-    with open(path, encoding="utf-8") as f:
-        return [l.strip() for l in f if l.strip()]
+    with open(path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f if line.strip()]
 
 
-def build_site_filter(raw):
+def build_site_filter(raw: str) -> str:
+    """
+    Turn 'uk, us, au' into '(site:.uk OR site:.us OR site:.au)'
+    Return '' for none/empty.
+    """
     raw = raw.strip().lower()
-    if raw in ("", "none", "no", "-"):
+    if raw in ("", "none", "no", "-", "null", "skip"):
         return ""
     parts = [p.strip().lstrip(".") for p in raw.split(",") if p.strip()]
     if not parts:
@@ -44,22 +60,51 @@ def build_site_filter(raw):
     return "(" + " OR ".join(f"site:.{p}" for p in parts) + ")"
 
 
-def generate_dorks(keywords, inurl_words, keyword_words, site_filter=""):
+def generate_dorks(
+    keywords: list[str],
+    inurl_words: list[str],
+    keyword_words: list[str],
+    site_filter: str = "",
+) -> list[str]:
+    """
+    Format:
+        inurl:<inurl_word> intext:(<KEYWORD>) <keyword_word> [site filter]
+    """
     suffix = f" {site_filter}" if site_filter else ""
-    return [
-        f"inurl:{iu} intext:({kw}) {kww}{suffix}"
-        for kw in keywords
-        for iu in inurl_words
-        for kww in keyword_words
-    ]
+    dorks = []
+    for kw in keywords:
+        for iu in inurl_words:
+            for kww in keyword_words:
+                dorks.append(f"inurl:{iu} intext:({kw}) {kww}{suffix}")
+    return dorks
 
 
+# ------------------------------------------------------------------
+# HANDLERS
+# ------------------------------------------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "🔍 *Dork Bot*\n\nSend /create to begin.\n\n"
+        "🔍 *Dork Generator Bot*\n\n"
+        "Send /create to begin.\n\n"
         "You'll be asked:\n"
         "1. What to look for (e.g. `braintree`)\n"
-        "2. Target sites (e.g. `uk, us, au` or `none`)",
+        "2. Target sites (e.g. `uk, us, au` or `none`)\n\n"
+        "Result is sent as `dorks.txt`.\n\n"
+        "Commands:\n"
+        "/create — start\n"
+        "/status — check wordlists\n"
+        "/cancel — abort",
+        parse_mode="Markdown",
+    )
+
+
+async def status_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    inurl_words = load_wordlist(INURL_FILE)
+    keyword_words = load_wordlist(KEYWORDS_FILE)
+    await update.message.reply_text(
+        f"📋 *Wordlists loaded:*\n"
+        f"• `shop.txt`: {len(inurl_words)} lines\n"
+        f"• `keywords.txt`: {len(keyword_words)} lines",
         parse_mode="Markdown",
     )
 
@@ -67,8 +112,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     await update.message.reply_text(
-        "🔎 *What to look for?*\n"
-        "Examples: `braintree` or `braintree, woocommerce`\n\n"
+        "🔎 *What to look for?*\n\n"
+        "Examples:\n"
+        "• `braintree`\n"
+        "• `braintree, woocommerce`\n"
+        "• `stripe, paypal`\n\n"
         "Send /cancel to abort.",
         parse_mode="Markdown",
     )
@@ -76,14 +124,23 @@ async def create_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def ask_targets(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keywords = [k.strip().upper() for k in update.message.text.split(",") if k.strip()]
+    raw = update.message.text.strip()
+    keywords = [k.strip().upper() for k in raw.split(",") if k.strip()]
+
     if not keywords:
-        await update.message.reply_text("❌ Try again or /cancel.")
+        await update.message.reply_text(
+            "❌ No valid keyword. Try again or send /cancel."
+        )
         return ASK_KEYWORD
+
     context.user_data["keywords"] = keywords
+
     await update.message.reply_text(
-        "🌍 *Target sites?*\n"
-        "Examples: `uk`, `uk, us, au`, or `none`\n\n"
+        "🌍 *Target sites?*\n\n"
+        "Examples:\n"
+        "• `uk`\n"
+        "• `uk, us, au`\n"
+        "• `none` (no site restriction)\n\n"
         "Send /cancel to abort.",
         parse_mode="Markdown",
     )
@@ -91,54 +148,80 @@ async def ask_targets(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def generate_and_send(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    site_filter = build_site_filter(update.message.text)
+    raw_targets = update.message.text.strip()
+    site_filter = build_site_filter(raw_targets)
+
     keywords = context.user_data.get("keywords", [])
     if not keywords:
-        await update.message.reply_text("❌ Session expired. Send /create")
+        await update.message.reply_text("❌ Session expired. Send /create again.")
         return ConversationHandler.END
 
     inurl_words = load_wordlist(INURL_FILE)
     keyword_words = load_wordlist(KEYWORDS_FILE)
+
     if not inurl_words:
-        await update.message.reply_text(f"❌ `{os.path.basename(INURL_FILE)}` missing/empty.", parse_mode="Markdown")
+        await update.message.reply_text(
+            "❌ `shop.txt` is missing or empty.",
+            parse_mode="Markdown",
+        )
         return ConversationHandler.END
     if not keyword_words:
-        await update.message.reply_text(f"❌ `{os.path.basename(KEYWORDS_FILE)}` missing/empty.", parse_mode="Markdown")
+        await update.message.reply_text(
+            "❌ `keywords.txt` is missing or empty.",
+            parse_mode="Markdown",
+        )
         return ConversationHandler.END
 
     dorks = generate_dorks(keywords, inurl_words, keyword_words, site_filter)
-    target_display = site_filter or "none"
+    total = len(dorks)
+    target_display = site_filter if site_filter else "none"
 
     await update.message.reply_text(
-        f"✅ Generating *{len(dorks)}* dorks\n"
+        f"✅ Generating *{total}* dorks\n"
         f"Keywords: `{', '.join(keywords)}`\n"
-        f"Targets: `{target_display}`",
+        f"Targets: `{target_display}`\n\n"
+        f"Sending as `dorks.txt`...",
         parse_mode="Markdown",
     )
 
-    buf = io.BytesIO(("\n".join(dorks) + "\n").encode("utf-8"))
+    content = "\n".join(dorks) + "\n"
+    file_bytes = io.BytesIO(content.encode("utf-8"))
+
+    caption = (
+        f"📄 dorks.txt — {total} dorks\n"
+        f"Keywords: {', '.join(keywords)}\n"
+        f"Targets: {target_display}"
+    )[:1024]
+
     await update.message.reply_document(
-        document=buf,
+        document=file_bytes,
         filename="dorks.txt",
-        caption=f"📄 {len(dorks)} dorks | {', '.join(keywords)} | {target_display}"[:1024],
+        caption=caption,
     )
     return ConversationHandler.END
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
-    await update.message.reply_text("❌ Cancelled.")
+    await update.message.reply_text("❌ Cancelled. Send /create to start again.")
     return ConversationHandler.END
 
 
-def build_app():
+# ------------------------------------------------------------------
+# APP BUILDER
+# ------------------------------------------------------------------
+def build_app() -> Application:
     app = Application.builder().token(BOT_TOKEN).updater(None).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("create", create_start)],
         states={
-            ASK_KEYWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_targets)],
-            ASK_TARGETS: [MessageHandler(filters.TEXT & ~filters.COMMAND, generate_and_send)],
+            ASK_KEYWORD: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_targets)
+            ],
+            ASK_TARGETS: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, generate_and_send)
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
         allow_reentry=True,
@@ -146,21 +229,26 @@ def build_app():
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", start))
+    app.add_handler(CommandHandler("status", status_cmd))
     app.add_handler(conv)
+
     return app
 
 
+# ------------------------------------------------------------------
+# ENTRY POINT
+# ------------------------------------------------------------------
 if __name__ == "__main__":
     if not BOT_TOKEN:
-        raise SystemExit("BOT_TOKEN not set")
+        raise SystemExit("❌ BOT_TOKEN not set in environment variables.")
 
     app = build_app()
 
     if RENDER_URL:
-        # Running on Render → webhook mode
+        # Running on Render → webhook mode (Web Service)
         webhook_path = BOT_TOKEN
         webhook_url = f"{RENDER_URL}/{webhook_path}"
-        logger.info(f"Starting webhook on {webhook_url}")
+        logger.info(f"Starting webhook mode on {webhook_url}")
         app.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -170,6 +258,6 @@ if __name__ == "__main__":
             allowed_updates=Update.ALL_TYPES,
         )
     else:
-        # Local dev → polling
-        logger.info("Starting polling (local dev)")
+        # Local dev → polling mode
+        logger.info("Starting polling mode (local dev)")
         app.run_polling(allowed_updates=Update.ALL_TYPES)
