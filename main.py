@@ -47,6 +47,7 @@ def generate_dorks(keywords, inurl_words, keyword_words, targets):
     targets: list of TLDs (e.g. ['uk','us','au']) or [''] for none.
     One dork per (keyword, inurl, keyword_word, target).
     Format: inurl:<iu> intext:<KW> <kww>[ site:.<t>]
+    Keyword case is preserved exactly as typed by the user.
     """
     dorks = []
     for kw in keywords:
@@ -72,7 +73,8 @@ async def generate(
     keywords: str = Form(...),
     targets: str = Form(""),
 ):
-    kw_list = [k.strip().upper() for k in keywords.split(",") if k.strip()]
+    # Case is preserved — no .upper()
+    kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
     if not kw_list:
         raise HTTPException(400, "No valid keywords provided.")
 
@@ -114,7 +116,12 @@ async def generate(
     )
 
 
-@app.get("/raw/{session_id}", response_class=PlainTextResponse, name="raw_dorks")
+@app.api_route(
+    "/raw/{session_id}",
+    methods=["GET", "HEAD"],
+    response_class=PlainTextResponse,
+    name="raw_dorks",
+)
 async def raw_dorks(session_id: str):
     data = SESSIONS.get(session_id)
     if not data:
