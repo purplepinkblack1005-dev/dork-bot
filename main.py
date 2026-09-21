@@ -14,9 +14,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# In-memory store: session_id -> dict(keywords, targets, dorks)
+# Templates live in the project root, no subfolder
+templates = Jinja2Templates(directory=str(BASE_DIR))
+
+# In-memory session store
 SESSIONS: dict[str, dict] = {}
 
 
@@ -43,12 +45,7 @@ def build_site_filter(raw: str) -> str:
     return "(" + " OR ".join(f"site:.{p}" for p in parts) + ")"
 
 
-def generate_dorks(
-    keywords: list[str],
-    inurl_words: list[str],
-    keyword_words: list[str],
-    site_filter: str = "",
-) -> list[str]:
+def generate_dorks(keywords, inurl_words, keyword_words, site_filter=""):
     suffix = f" {site_filter}" if site_filter else ""
     dorks = []
     for kw in keywords:
