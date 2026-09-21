@@ -2,83 +2,527 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dorks generated</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dorks Generated · Dork Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #0a0e1a;
+      --bg-soft: #111827;
+      --panel: #151b2d;
+      --panel-2: #1a2138;
+      --border: #232b45;
+      --border-hi: #2f3a5c;
+      --text: #e5e9f5;
+      --text-dim: #8b95b3;
+      --text-mute: #5e6785;
+      --accent: #6366f1;
+      --accent-2: #8b5cf6;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.3);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.55;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.25rem 4rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 900px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 60%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.55;
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
       max-width: 720px;
-      margin: 3rem auto;
-      padding: 0 1.25rem;
     }
-    h1 { font-size: 1.6rem; }
-    .box {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      margin: 1rem 0;
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
     }
-    .row { margin: 0.3rem 0; color: #94a3b8; }
-    .row strong { color: #e2e8f0; }
-    .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.25rem; }
-    a.btn {
-      display: inline-block;
-      padding: 0.65rem 1.1rem;
-      background: #3b82f6;
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      font-weight: 600;
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 0.78rem;
+      color: #a7f3d0;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+      letter-spacing: 0.02em;
+    }
+
+    .badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success-glow);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--text-dim);
       font-size: 0.95rem;
+      margin: 0;
     }
-    a.btn.secondary { background: #475569; }
-    a.btn:hover { background: #2563eb; }
-    a.btn.secondary:hover { background: #334155; }
-    pre {
-      background: #020617;
-      padding: 1rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      font-size: 0.85rem;
-      line-height: 1.4;
-      max-height: 260px;
+
+    .subtitle strong {
+      color: #c7d2fe;
+      font-weight: 600;
     }
+
+    /* Card */
+    .card {
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.03) inset,
+        0 20px 40px -20px rgba(0, 0, 0, 0.6);
+      margin-bottom: 1.25rem;
+    }
+
+    .card h3 {
+      margin: 0 0 1rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-mute);
+    }
+
+    /* Meta grid */
+    .meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .meta-item {
+      padding: 0.75rem 0.9rem;
+      background: #0d1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .meta-item .k {
+      font-size: 0.7rem;
+      color: var(--text-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .meta-item .v {
+      font-size: 0.92rem;
+      color: var(--text);
+      font-weight: 500;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      word-break: break-word;
+    }
+
+    .meta-item .v.accent {
+      color: #a5b4fc;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    /* Raw URL */
+    .url-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: stretch;
+    }
+
     .url-box {
-      background: #020617;
-      padding: 0.75rem 1rem;
-      border-radius: 6px;
-      font-family: ui-monospace, monospace;
-      font-size: 0.9rem;
-      word-break: break-all;
-      color: #38bdf8;
+      flex: 1;
+      background: #0d1220;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      color: #7dd3fc;
+      white-space: nowrap;
+      overflow-x: auto;
+      display: flex;
+      align-items: center;
+      scrollbar-width: thin;
     }
-    .copy-hint { font-size: 0.8rem; color: #64748b; margin-top: 0.3rem; }
+
+    .url-box::-webkit-scrollbar { height: 4px; }
+    .url-box::-webkit-scrollbar-thumb {
+      background: var(--border-hi);
+      border-radius: 4px;
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 0 1rem;
+      background: var(--panel-2);
+      border: 1px solid var(--border-hi);
+      color: var(--text);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .copy-btn:hover {
+      background: var(--border);
+      border-color: var(--accent);
+      color: #c7d2fe;
+    }
+
+    .copy-btn.copied {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: var(--success);
+      color: #6ee7b7;
+    }
+
+    .copy-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .url-hint {
+      font-size: 0.78rem;
+      color: var(--text-mute);
+      margin-top: 0.6rem;
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+      margin-top: 1.25rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.8rem 1.25rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      letter-spacing: 0.01em;
+    }
+
+    .btn svg { width: 15px; height: 15px; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+      color: white;
+      box-shadow: 0 8px 24px -8px var(--accent-glow);
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 28px -8px var(--accent-glow);
+      filter: brightness(1.05);
+    }
+
+    .btn-secondary {
+      background: var(--panel-2);
+      border-color: var(--border-hi);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background: var(--border);
+      border-color: var(--accent);
+      color: #c7d2fe;
+    }
+
+    /* Preview */
+    .preview-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.85rem;
+    }
+
+    .preview-head h3 { margin: 0; }
+
+    .preview-count {
+      font-size: 0.75rem;
+      color: var(--text-mute);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    pre {
+      background: #060a14;
+      border: 1px solid var(--border);
+      padding: 1rem 1.1rem;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      max-height: 300px;
+      margin: 0;
+      color: #cbd5e1;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      scrollbar-width: thin;
+    }
+
+    pre::-webkit-scrollbar { width: 6px; height: 6px; }
+    pre::-webkit-scrollbar-thumb {
+      background: var(--border-hi);
+      border-radius: 6px;
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      color: var(--text-mute);
+      font-size: 0.78rem;
+      margin-top: 1.5rem;
+    }
+
+    .footer a {
+      color: var(--text-dim);
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.15s;
+    }
+
+    .footer a:hover {
+      border-bottom-color: var(--text-dim);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid var(--success);
+      color: #6ee7b7;
+      padding: 0.7rem 1.25rem;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 2rem 1rem 3rem; }
+      h1 { font-size: 1.6rem; }
+      .card { padding: 1.35rem; border-radius: 14px; }
+      .meta { grid-template-columns: 1fr; }
+      .url-row { flex-direction: column; }
+      .copy-btn { padding: 0.75rem 1rem; justify-content: center; }
+      .actions { flex-direction: column; }
+      .btn { width: 100%; }
+      .btn-primary { min-width: auto; }
+    }
   </style>
 </head>
 <body>
-  <h1>✅ {{ count }} dorks generated</h1>
+  <div class="wrap">
 
-  <div class="box">
-    <div class="row"><strong>Keywords:</strong> {{ keywords }}</div>
-    <div class="row"><strong>Targets:</strong> {{ targets }}</div>
-    <div class="row"><strong>Session:</strong> {{ session_id }}</div>
-  </div>
+    <div class="header">
+      <div class="badge">
+        <span class="dot"></span>
+        Generation complete
+      </div>
+      <h1>{{ count }} dorks generated</h1>
+      <p class="subtitle">Your results are ready to view and download.</p>
+    </div>
 
-  <h3>Raw link</h3>
-  <div class="url-box">{{ raw_url }}</div>
-  <div class="copy-hint">Open this URL to see plain-text dorks, or share it.</div>
+    <!-- Meta card -->
+    <div class="card">
+      <div class="meta">
+        <div class="meta-item">
+          <div class="k">Keywords</div>
+          <div class="v">{{ keywords }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="k">Targets</div>
+          <div class="v">{{ targets }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="k">Total dorks</div>
+          <div class="v accent">{{ count }}</div>
+        </div>
+        <div class="meta-item">
+          <div class="k">Session</div>
+          <div class="v">{{ session_id }}</div>
+        </div>
+      </div>
 
-  <div class="actions">
-    <a class="btn" href="{{ download_url }}">⬇ Download as .txt</a>
-    <a class="btn secondary" href="{{ raw_url }}" target="_blank">View raw</a>
-    <a class="btn secondary" href="/">New generation</a>
-  </div>
+      <h3>Raw link</h3>
+      <div class="url-row">
+        <div class="url-box" id="rawUrl">{{ raw_url }}</div>
+        <button class="copy-btn" id="copyBtn" type="button" onclick="copyUrl()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copyLabel">Copy</span>
+        </button>
+      </div>
+      <div class="url-hint">Open this link to see plain-text dorks, or share it with anyone.</div>
 
-  <h3 style="margin-top:2rem;">Preview (first 15)</h3>
-  <pre>{% for d in preview %}{{ d }}
+      <div class="actions">
+        <a class="btn btn-primary" href="{{ download_url }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Download as .txt
+        </a>
+        <a class="btn btn-secondary" href="{{ raw_url }}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          View raw
+        </a>
+        <a class="btn btn-secondary" href="/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          New
+        </a>
+      </div>
+    </div>
+
+    <!-- Preview card -->
+    <div class="card">
+      <div class="preview-head">
+        <h3>Preview</h3>
+        <span class="preview-count">first {{ preview|length }} of {{ count }}</span>
+      </div>
+      <pre>{% for d in preview %}{{ d }}
 {% endfor %}</pre>
+    </div>
+
+    <div class="footer">
+      Dorks are held in memory for this session only · <a href="/">Generate another</a>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast">URL copied to clipboard</div>
+
+  <script>
+    async function copyUrl() {
+      const text = document.getElementById('rawUrl').textContent.trim();
+      const btn = document.getElementById('copyBtn');
+      const label = document.getElementById('copyLabel');
+      const toast = document.getElementById('toast');
+
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (e) {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+
+      btn.classList.add('copied');
+      label.textContent = 'Copied';
+      toast.classList.add('show');
+
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        label.textContent = 'Copy';
+        toast.classList.remove('show');
+      }, 1800);
+    }
+  </script>
 </body>
 </html>
