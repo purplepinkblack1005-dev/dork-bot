@@ -14,11 +14,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
-
-# Templates live in the project root, no subfolder
 templates = Jinja2Templates(directory=str(BASE_DIR))
 
-# In-memory session store
 SESSIONS: dict[str, dict] = {}
 
 
@@ -33,25 +30,31 @@ def load_wordlist(path: Path) -> list[str]:
         return [line.strip() for line in f if line.strip()]
 
 
-def build_site_filter(raw: str) -> str:
+def parse_targets(raw: str) -> list[str]:
+    """
+    'uk, us, au' -> ['uk', 'us', 'au']
+    '' or 'none' -> ['']  (no site suffix)
+    """
     raw = (raw or "").strip().lower()
     if raw in ("", "none", "no", "-", "null", "skip"):
-        return ""
+        return [""]
     parts = [p.strip().lstrip(".") for p in raw.split(",") if p.strip()]
-    if not parts:
-        return ""
-    if len(parts) == 1:
-        return f"site:.{parts[0]}"
-    return "(" + " OR ".join(f"site:.{p}" for p in parts) + ")"
+    return parts if parts else [""]
 
 
-def generate_dorks(keywords, inurl_words, keyword_words, site_filter=""):
-    suffix = f" {site_filter}" if site_filter else ""
+def generate_dorks(keywords, inurl_words, keyword_words, targets):
+    """
+    targets: list of TLDs (e.g. ['uk','us','au']) or [''] for none.
+    One dork per (keyword, inurl, keyword_word, target).
+    Format: inurl:<iu> intext:<KW> <kww>[ site:.<t>]
+    """
     dorks = []
     for kw in keywords:
         for iu in inurl_words:
             for kww in keyword_words:
-                dorks.append(f"inurl:{iu} intext:({kw}) {kww}{suffix}")
+                for t in targets:
+                    suffix = f" site:.{t}" if t else ""
+                    dorks.append(f"inurl:{iu} intext:{kw} {kww}{suffix}")
     return dorks
 
 
@@ -81,14 +84,14 @@ async def generate(
     if not keyword_words:
         raise HTTPException(500, "keywords.txt is missing or empty.")
 
-    site_filter = build_site_filter(targets)
-    dorks = generate_dorks(kw_list, inurl_words, keyword_words, site_filter)
+    target_list = parse_targets(targets)
+    dorks = generate_dorks(kw_list, inurl_words, keyword_words, target_list)
 
     session_id = uuid.uuid4().hex[:12]
     SESSIONS[session_id] = {
         "keywords": kw_list,
         "targets": targets or "none",
-        "site_filter": site_filter,
+        "target_list": target_list,
         "dorks": dorks,
         "count": len(dorks),
     }
