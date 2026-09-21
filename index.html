@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dork Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      max-width: 720px;
+      margin: 3rem auto;
+      padding: 0 1.25rem;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+    p.sub { color: #94a3b8; margin-top: 0; }
+    label { display: block; margin-top: 1.25rem; font-weight: 600; }
+    textarea, input[type=text] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.4rem;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 1rem;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+    textarea { min-height: 80px; resize: vertical; }
+    button {
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #2563eb; }
+    .hint { font-size: 0.85rem; color: #64748b; margin-top: 0.3rem; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Dork Generator</h1>
+  <p class="sub">Combine your wordlists with keywords and target sites.</p>
+
+  <form method="post" action="/generate">
+    <label for="keywords">What to look for (comma-separated)</label>
+    <textarea id="keywords" name="keywords" placeholder="braintree, woocommerce" required></textarea>
+    <div class="hint">e.g. <code>braintree</code> or <code>braintree, woocommerce</code></div>
+
+    <label for="targets">Target sites</label>
+    <input type="text" id="targets" name="targets" placeholder="uk, us, au  —  or leave blank / 'none'">
+    <div class="hint">Comma-separated. Leave blank or type <code>none</code> for no site restriction.</div>
+
+    <button type="submit">Generate dorks</button>
+  </form>
+</body>
+</html>
