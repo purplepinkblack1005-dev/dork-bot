@@ -1,9 +1,15 @@
 import os
 import uuid
+import random
 import logging
+from collections import OrderedDict
 from pathlib import Path
 from fastapi import FastAPI, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, PlainTextResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    PlainTextResponse,
+    StreamingResponse,
+)
 from fastapi.templating import Jinja2Templates
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -16,7 +22,15 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 templates = Jinja2Templates(directory=str(BASE_DIR))
 
-SESSIONS: dict[str, dict] = {}
+# ------------------------------------------------------------------
+# LIMITS
+# ------------------------------------------------------------------
+MAX_FILE_BYTES = 30 * 1024 * 1024          # 30 MB cap
+AVG_BYTES_PER_DORK = 80                    # estimate per line
+MAX_DORKS = MAX_FILE_BYTES // AVG_BYTES_PER_DORK   # ~390k
+MAX_SESSIONS = 20                          # keep only N recent sessions
+
+SESSIONS: OrderedDict[str, dict] = OrderedDict()
 
 
 # ------------------------------------------------------------------
@@ -31,10 +45,6 @@ def load_wordlist(path: Path) -> list[str]:
 
 
 def parse_targets(raw: str) -> list[str]:
-    """
-    'uk, us, au' -> ['uk', 'us', 'au']
-    '' or 'none' -> ['']  (no site suffix)
-    """
     raw = (raw or "").strip().lower()
     if raw in ("", "none", "no", "-", "null", "skip"):
         return [""]
@@ -42,13 +52,7 @@ def parse_targets(raw: str) -> list[str]:
     return parts if parts else [""]
 
 
-def generate_dorks(keywords, inurl_words, keyword_words, targets):
-    """
-    targets: list of TLDs (e.g. ['uk','us','au']) or [''] for none.
-    One dork per (keyword, inurl, keyword_word, target).
-    Format: inurl:<iu> intext:<KW> <kww>[ site:.<t>]
-    Keyword case is preserved exactly as typed by the user.
-    """
+def generate_full(keywords, inurl_words, keyword_words, targets):
     dorks = []
     for kw in keywords:
         for iu in inurl_words:
@@ -56,6 +60,28 @@ def generate_dorks(keywords, inurl_words, keyword_words, targets):
                 for t in targets:
                     suffix = f" site:.{t}" if t else ""
                     dorks.append(f"inurl:{iu} intext:{kw} {kww}{suffix}")
+    return dorks
+
+
+def generate_sampled(keywords, inurl_words, keyword_words, targets, sample_size):
+    seen = set()
+    dorks = []
+    attempts = 0
+    max_attempts = sample_size * 5
+
+    while len(dorks) < sample_size and attempts < max_attempts:
+        attempts += 1
+        kw = random.choice(keywords)
+        iu = random.choice(inurl_words)
+        kww = random.choice(keyword_words)
+        t = random.choice(targets)
+        suffix = f" site:.{t}" if t else ""
+        line = f"inurl:{iu} intext:{kw} {kww}{suffix}"
+        if line in seen:
+            continue
+        seen.add(line)
+        dorks.append(line)
+
     return dorks
 
 
@@ -73,7 +99,6 @@ async def generate(
     keywords: str = Form(...),
     targets: str = Form(""),
 ):
-    # Case is preserved — no .upper()
     kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
     if not kw_list:
         raise HTTPException(400, "No valid keywords provided.")
@@ -87,7 +112,19 @@ async def generate(
         raise HTTPException(500, "keywords.txt is missing or empty.")
 
     target_list = parse_targets(targets)
-    dorks = generate_dorks(kw_list, inurl_words, keyword_words, target_list)
+
+    total_possible = (
+        len(kw_list) * len(inurl_words) * len(keyword_words) * len(target_list)
+    )
+
+    sampled = total_possible > MAX_DORKS
+
+    if sampled:
+        dorks = generate_sampled(
+            kw_list, inurl_words, keyword_words, target_list, MAX_DORKS
+        )
+    else:
+        dorks = generate_full(kw_list, inurl_words, keyword_words, target_list)
 
     session_id = uuid.uuid4().hex[:12]
     SESSIONS[session_id] = {
@@ -96,7 +133,12 @@ async def generate(
         "target_list": target_list,
         "dorks": dorks,
         "count": len(dorks),
+        "total_possible": total_possible,
+        "sampled": sampled,
     }
+    SESSIONS.move_to_end(session_id)
+    while len(SESSIONS) > MAX_SESSIONS:
+        SESSIONS.popitem(last=False)
 
     raw_url = str(request.url_for("raw_dorks", session_id=session_id))
     download_url = str(request.url_for("download_dorks", session_id=session_id))
@@ -109,6 +151,8 @@ async def generate(
             "keywords": ", ".join(kw_list),
             "targets": targets or "none",
             "count": len(dorks),
+            "total_possible": total_possible,
+            "sampled": sampled,
             "raw_url": raw_url,
             "download_url": download_url,
             "preview": dorks[:15],
@@ -119,14 +163,18 @@ async def generate(
 @app.api_route(
     "/raw/{session_id}",
     methods=["GET", "HEAD"],
-    response_class=PlainTextResponse,
     name="raw_dorks",
 )
 async def raw_dorks(session_id: str):
     data = SESSIONS.get(session_id)
     if not data:
         raise HTTPException(404, "Session not found or expired.")
-    return PlainTextResponse("\n".join(data["dorks"]) + "\n")
+
+    def iter_lines():
+        for d in data["dorks"]:
+            yield d + "\n"
+
+    return StreamingResponse(iter_lines(), media_type="text/plain")
 
 
 @app.get("/download/{session_id}", name="download_dorks")
@@ -134,11 +182,15 @@ async def download_dorks(session_id: str):
     data = SESSIONS.get(session_id)
     if not data:
         raise HTTPException(404, "Session not found or expired.")
-    body = "\n".join(data["dorks"]) + "\n"
+
+    def iter_lines():
+        for d in data["dorks"]:
+            yield d + "\n"
+
     headers = {
         "Content-Disposition": f'attachment; filename="dorks_{session_id}.txt"'
     }
-    return Response(content=body, media_type="text/plain", headers=headers)
+    return StreamingResponse(iter_lines(), media_type="text/plain", headers=headers)
 
 
 @app.get("/health", response_class=PlainTextResponse)
