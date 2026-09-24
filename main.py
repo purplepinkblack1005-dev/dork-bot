@@ -25,9 +25,6 @@ templates = Jinja2Templates(directory=str(BASE_DIR))
 # ------------------------------------------------------------------
 # LIMITS
 # ------------------------------------------------------------------
-MAX_FILE_BYTES = 30 * 1024 * 1024          # 30 MB cap
-AVG_BYTES_PER_DORK = 80                    # estimate per line
-MAX_DORKS = MAX_FILE_BYTES // AVG_BYTES_PER_DORK   # ~390k
 MAX_SESSIONS = 20                          # keep only N recent sessions
 
 SESSIONS: OrderedDict[str, dict] = OrderedDict()
@@ -63,28 +60,6 @@ def generate_full(keywords, inurl_words, keyword_words, targets):
     return dorks
 
 
-def generate_sampled(keywords, inurl_words, keyword_words, targets, sample_size):
-    seen = set()
-    dorks = []
-    attempts = 0
-    max_attempts = sample_size * 5
-
-    while len(dorks) < sample_size and attempts < max_attempts:
-        attempts += 1
-        kw = random.choice(keywords)
-        iu = random.choice(inurl_words)
-        kww = random.choice(keyword_words)
-        t = random.choice(targets)
-        suffix = f" site:.{t}" if t else ""
-        line = f"inurl:{iu} intext:{kw} {kww}{suffix}"
-        if line in seen:
-            continue
-        seen.add(line)
-        dorks.append(line)
-
-    return dorks
-
-
 # ------------------------------------------------------------------
 # ROUTES
 # ------------------------------------------------------------------
@@ -117,14 +92,9 @@ async def generate(
         len(kw_list) * len(inurl_words) * len(keyword_words) * len(target_list)
     )
 
-    sampled = total_possible > MAX_DORKS
-
-    if sampled:
-        dorks = generate_sampled(
-            kw_list, inurl_words, keyword_words, target_list, MAX_DORKS
-        )
-    else:
-        dorks = generate_full(kw_list, inurl_words, keyword_words, target_list)
+    # Generate the complete result set. There is no output-size limit or
+    # random sampling cap; callers receive every possible dork.
+    dorks = generate_full(kw_list, inurl_words, keyword_words, target_list)
 
     session_id = uuid.uuid4().hex[:12]
     SESSIONS[session_id] = {
@@ -134,7 +104,7 @@ async def generate(
         "dorks": dorks,
         "count": len(dorks),
         "total_possible": total_possible,
-        "sampled": sampled,
+        "sampled": False,
     }
     SESSIONS.move_to_end(session_id)
     while len(SESSIONS) > MAX_SESSIONS:
@@ -152,7 +122,7 @@ async def generate(
             "targets": targets or "none",
             "count": len(dorks),
             "total_possible": total_possible,
-            "sampled": sampled,
+            "sampled": False,
             "raw_url": raw_url,
             "download_url": download_url,
             "preview": dorks[:15],
